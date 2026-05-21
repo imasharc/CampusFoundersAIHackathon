@@ -1,0 +1,46 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# uv
+uv.lock
+
+# ML model cache (downloaded by transformers/spaCy — large!)
+.cache/
+~/.cache/huggingface/
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# Data & outputs (keep source data out of git)
+*.xlsx
+*.csv
+pipeline_evaluation.xlsx
+fan_dataset_*.xlsx
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

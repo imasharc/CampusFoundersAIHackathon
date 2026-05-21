@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raumdeuter — Fan Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0A0D0F;--surface:#111518;--border:#1E2428;--border2:#2A3038;--green:#00E5A0;--amber:#F5A623;--red:#FF4458;--blue:#3D8EFF;--text:#E8EDF2;--muted:#5A6472;--dim:#1E2428}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.4}
+header{border-bottom:1px solid var(--border);padding:0 40px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(10,13,15,.92);backdrop-filter:blur(12px);z-index:100}
+.logo{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 8px var(--green)}50%{box-shadow:0 0 18px var(--green),0 0 30px rgba(0,229,160,.3)}}
+.hbadge{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;padding:4px 10px;border:1px solid var(--border2);border-radius:20px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.gdot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.hero{padding:64px 40px 48px;max-width:1100px;margin:0 auto;position:relative;z-index:1}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--green);margin-bottom:18px;display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:'';display:inline-block;width:24px;height:1px;background:var(--green)}
+h1{font-size:clamp(34px,5.5vw,66px);font-weight:800;line-height:1.06;letter-spacing:-2px;margin-bottom:18px}
+h1 em{font-family:'Instrument Serif',serif;font-style:italic;font-weight:400;color:var(--green)}
+.sub{font-size:15px;line-height:1.65;color:var(--muted);max-width:520px;margin-bottom:36px}
+.pipe-strip{display:flex;align-items:center;margin-bottom:56px;overflow-x:auto;padding-bottom:4px;gap:0}
+.pbox{display:flex;flex-direction:column;padding:10px 14px;border:1px solid var(--border2);border-radius:8px;background:var(--surface);min-width:120px;flex-shrink:0;transition:border-color .3s}
+.pbox.lit{border-color:var(--green)}
+.pbox.lit .pname{color:var(--green)}
+.pnum{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:3px}
+.pname{font-size:11px;font-weight:700;letter-spacing:.5px}
+.ptech{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:2px}
+.parr{width:24px;height:1px;background:var(--border2);flex-shrink:0;position:relative}
+.parr::after{content:'›';position:absolute;right:-5px;top:-9px;font-size:14px;color:var(--border2)}
+.main{max-width:1100px;margin:0 auto;padding:0 40px 80px;display:grid;grid-template-columns:1fr 1fr;gap:28px;position:relative;z-index:1}
+@media(max-width:768px){.main{grid-template-columns:1fr}.hero,.main{padding-left:20px;padding-right:20px}}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.ph{padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.pt{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.pb{padding:22px}
+textarea{width:100%;min-height:170px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Instrument Serif',serif;font-size:16px;line-height:1.7;padding:14px 16px;resize:vertical;outline:none;transition:border-color .2s}
+textarea:focus{border-color:var(--green)}
+textarea::placeholder{color:var(--muted);font-style:italic}
+.exrow{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.ex{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.5px;padding:5px 11px;background:var(--dim);border:1px solid var(--border2);border-radius:20px;color:var(--muted);cursor:pointer;transition:all .15s}
+.ex:hover{border-color:var(--green);color:var(--green)}
+.abtn{width:100%;padding:15px;background:var(--green);border:none;border-radius:10px;color:var(--bg);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;margin-top:14px;position:relative;overflow:hidden}
+.abtn:hover:not(:disabled){background:#00ffb3;box-shadow:0 0 30px rgba(0,229,160,.4)}
+.abtn:disabled{opacity:.5;cursor:not-allowed}
+.abtn.loading::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);animation:shim 1s infinite}
+@keyframes shim{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.empty{padding:50px 20px;text-align:center;color:var(--muted);font-family:'Instrument Serif',serif;font-style:italic;font-size:15px;line-height:1.7}
+
+/* step indicators */
+.steps-live{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.step-row{display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.5px;color:var(--muted);transition:color .3s}
+.step-row.done{color:var(--green)}
+.step-row.running{color:var(--amber);animation:blink .8s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.step-icon{width:18px;height:18px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;transition:all .3s}
+.step-row.done .step-icon{background:var(--green);border-color:var(--green);color:var(--bg)}
+.step-row.running .step-icon{border-color:var(--amber);color:var(--amber)}
+
+/* result sections */
+.slabel{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.sdisplay{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+.snum{font-size:50px;font-weight:800;letter-spacing:-3px;line-height:1;transition:color .5s}
+.slbl{font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:3px 10px;border-radius:4px}
+.slbl.Positive{background:rgba(0,229,160,.12);color:var(--green)}
+.slbl.Neutral{background:rgba(245,166,35,.12);color:var(--amber)}
+.slbl.Negative{background:rgba(255,68,88,.12);color:var(--red)}
+.gauge-track{height:7px;border-radius:4px;background:linear-gradient(90deg,var(--green),var(--amber) 50%,var(--red));position:relative;margin-bottom:7px}
+.gauge-marker{position:absolute;top:50%;transform:translate(-50%,-50%);width:16px;height:16px;border-radius:50%;background:var(--bg);border:3px solid #fff;box-shadow:0 0 10px rgba(255,255,255,.3);transition:left .7s cubic-bezier(.34,1.56,.64,1)}
+.glabels{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)}
+.div{height:1px;background:var(--border);margin:18px 0}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.chip{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;padding:4px 11px;border-radius:4px;border:1px solid var(--border2);color:var(--text);background:var(--dim);animation:cin .3s ease forwards;opacity:0;transform:translateY(5px)}
+@keyframes cin{to{opacity:1;transform:translateY(0)}}
+.rbox{background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:0 8px 8px 0;padding:13px 16px;font-family:'Instrument Serif',serif;font-size:15px;line-height:1.7;margin-top:8px}
+.mrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.mp{font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 10px;border-radius:20px;display:flex;align-items:center;gap:5px}
+.mp.pii{border:1px solid rgba(0,229,160,.3);color:var(--green);background:rgba(0,229,160,.07)}
+.mp.other{border:1px solid var(--border2);color:var(--muted);background:var(--dim)}
+.jtog{background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--muted);cursor:pointer;transition:all .15s}
+.jtog:hover{border-color:var(--blue);color:var(--blue)}
+.jblock{display:none;margin-top:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;color:#9DB2D1;white-space:pre-wrap;word-break:break-all;max-height:280px;overflow-y:auto}
+.jblock.open{display:block}
+footer{border-top:1px solid var(--border);padding:22px 40px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:relative;z-index:1}
+.fl{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px}
+.sb{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:3px 9px;border:1px solid var(--border);border-radius:3px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="logo-dot"></span>RAUMDEUTER</div>
+  <div class="hbadge"><span class="gdot"></span>GDPR COMPLIANT · PII MASKED</div>
+</header>
+
+<section class="hero">
+  <div class="eyebrow">Fan Intelligence Pipeline</div>
+  <h1>Football fans.<br><em>Real insights.</em><br>Zero PII.</h1>
+  <p class="sub">Paste any fan comment in English, German, or both. Presidio strips PII locally. RoBERTa scores sentiment. Fireworks/Llama classifies topics. Nothing with personal data leaves this server.</p>
+
+  <div class="pipe-strip">
+    <div class="pbox" id="ps1"><span class="pnum">01</span><span class="pname">PII Masking</span><span class="ptech">Presidio (local)</span></div>
+    <div class="parr"></div>
+    <div class="pbox" id="ps2"><span class="pnum">02</span><span class="pname">Sentiment</span><span class="ptech">XLM-RoBERTa</span></div>
+    <div class="parr"></div>
+    <div class="pbox" id="ps3"><span class="pnum">03</span><span class="pname">Topics + Reason</span><span class="ptech">Llama 3.1 (Fireworks)</span></div>
+    <div class="parr"></div>
+    <div class="pbox" id="ps4"><span class="pnum">04</span><span class="pname">JSON Output</span><span class="ptech">Dashboard / CRM</span></div>
+  </div>
+</section>
+
+<main class="main">
+  <div class="panel">
+    <div class="ph">
+      <span class="pt">Fan Comment</span>
+      <span id="ccount" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">0 chars</span>
+    </div>
+    <div class="pb">
+      <textarea id="inp" placeholder="Paste or type any fan comment here…&#10;&#10;English, German, or a mix of both."></textarea>
+      <div class="exrow">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;align-self:center">TRY:</span>
+        <button class="ex" onclick="load(0)">😡 Angry fan</button>
+        <button class="ex" onclick="load(1)">🎉 Happy fan</button>
+        <button class="ex" onclick="load(2)">🇩🇪 German</button>
+        <button class="ex" onclick="load(3)">🔀 Mixed</button>
+        <button class="ex" onclick="load(4)">📋 Commercial</button>
+      </div>
+      <button class="abtn" id="abtn" onclick="analyse()">Analyse Comment →</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ph">
+      <span class="pt">Analysis Result</span>
+      <button class="jtog" id="jtog" style="display:none" onclick="document.getElementById('jblock').classList.toggle('open')">{ } JSON</button>
+    </div>
+    <div class="pb" id="rb">
+      <div class="empty">Analysis will appear here.<br>Results stream in as each step completes.</div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="fl">RAUMDEUTER AI HACKATHON · FAN INTELLIGENCE PIPELINE</div>
+  <div style="display:flex;gap:10px">
+    <span class="sb">Presidio</span><span class="sb">XLM-RoBERTa</span>
+    <span class="sb">Llama 3.1</span><span class="sb">FastAPI</span>
+  </div>
+</footer>
+
+<script>
+const API = window.location.origin;
+const EX = [
+  `Hi I'm James Wilson from Manchester, j.wilson@gmail.com — three home defeats and the manager still doesn't change the formation? Eleven goals conceded playing the same high line that's been punished every week. Call me at +44 7891 234567 if anyone wants to discuss this.`,
+  `Last night's match was absolutely incredible — the atmosphere when the equaliser went in was something I haven't felt at this ground in years. The new striker is worth every penny and the way he dropped deep to link play was outstanding. Best football we've played in a long time.`,
+  `Ich heiße Klaus Bauer aus München, k.bauer@web.de — der Schiedsrichter gestern war eine absolute Katastrophe. Der Elfmeter in der 78. Minute war eindeutig, wir bekommen stattdessen in der 82. ein Gegentor. Ich verfolge diesen Verein seit dreißig Jahren.`,
+  `Ich war last night im Stadion — mein erstes Mal in dieser Saison — and the Atmosphäre was electric from the first minute. Das neue Trikot sieht fantastisch aus, I need to order one. My email is seb.hartmann@gmail.com if the shop wants to let me know when XL is back.`,
+  `Hi, I'm Sarah Collins, s.collins@businessfan.co.uk — we run a mid-sized events company and we're interested in corporate hospitality for the second half of the season. Executive boxes for 12-15 people, catering included. Could someone call me on +44 7900 123456?`,
+];
+
+function load(i){ document.getElementById('inp').value=EX[i]; updateCount(); }
+function updateCount(){ document.getElementById('ccount').textContent=`${document.getElementById('inp').value.length} chars`; }
+document.getElementById('inp').addEventListener('input',updateCount);
+document.getElementById('inp').addEventListener('keydown',e=>{ if(e.ctrlKey&&e.key==='Enter') analyse(); });
+
+function setStep(n){
+  for(let i=1;i<=4;i++) document.getElementById(`ps${i}`).classList.toggle('lit', i===n);
+}
+
+let lastResult=null;
+
+async function analyse(){
+  const msg=document.getElementById('inp').value.trim();
+  if(!msg) return;
+  const btn=document.getElementById('abtn');
+  btn.disabled=true; btn.classList.add('loading'); btn.textContent='Analysing…';
+  document.getElementById('jtog').style.display='none';
+
+  // Show live step indicators
+  document.getElementById('rb').innerHTML=`
+    <div class="steps-live">
+      <div class="step-row running" id="sr1"><div class="step-icon">1</div>PII MASKING — Presidio scanning…</div>
+      <div class="step-row" id="sr2"><div class="step-icon">2</div>SENTIMENT — waiting for step 1…</div>
+      <div class="step-row" id="sr3"><div class="step-icon">3</div>TOPICS & REASON — waiting for step 2…</div>
+    </div>
+    <div id="partial-result"></div>`;
+
+  setStep(1);
+
+  try {
+    const resp = await fetch(`${API}/analyse/stream`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({message: msg}),
+    });
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while(true){
+      const {done, value} = await reader.read();
+      if(done) break;
+      buf += decoder.decode(value, {stream:true});
+      const lines = buf.split('\n\n');
+      buf = lines.pop();
+      for(const line of lines){
+        if(!line.startsWith('data:')) continue;
+        const data = JSON.parse(line.slice(5).trim());
+        handleEvent(data);
+      }
+    }
+  } catch(err) {
+    document.getElementById('rb').innerHTML=`
+      <div style="padding:30px 0;text-align:center">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--red);letter-spacing:1px;margin-bottom:10px">✗ ERROR</div>
+        <div style="color:var(--muted);font-size:13px">${err.message}<br><br>
+        Check <span style="font-family:'JetBrains Mono',monospace;color:var(--text)">${API}/health</span></div>
+      </div>`;
+  } finally {
+    btn.disabled=false; btn.classList.remove('loading'); btn.textContent='Analyse Comment →';
+    setStep(0);
+  }
+}
+
+function markDone(n){ const r=document.getElementById(`sr${n}`); if(r){r.classList.remove('running');r.classList.add('done');r.querySelector('.step-icon').textContent='✓';} }
+function markRunning(n){ const r=document.getElementById(`sr${n}`); if(r){r.classList.add('running');} }
+
+function handleEvent(d){
+  if(d.step==='pii_done'){
+    markDone(1); markRunning(2); setStep(2);
+    document.getElementById('sr2').textContent='';
+    document.getElementById('sr2').innerHTML=`<div class="step-icon">2</div>SENTIMENT — running RoBERTa…`;
+    document.getElementById('sr2').classList.add('running');
+  }
+  else if(d.step==='sentiment_done'){
+    markDone(2); markRunning(3); setStep(3);
+    document.getElementById('sr3').innerHTML=`<div class="step-icon">3</div>TOPICS — LLM classifying…`;
+    document.getElementById('sr3').classList.add('running');
+    // Show sentiment immediately
+    const sc=d.sentiment_score??0;
+    const lbl=d.sentiment_label??'Neutral';
+    const col=sc<=0.35?'var(--green)':sc<=0.64?'var(--amber)':'var(--red)';
+    document.getElementById('partial-result').innerHTML=`
+      <div style="margin-top:16px">
+        <div class="slabel">Sentiment Score</div>
+        <div class="sdisplay">
+          <span class="snum" style="color:${col}">${sc.toFixed(2)}</span>
+          <span class="slbl ${lbl}">${lbl}</span>
+        </div>
+        <div class="gauge-track"><div class="gauge-marker" id="gm" style="left:${Math.round(sc*100)}%"></div></div>
+        <div class="glabels"><span>0.00 · Positive</span><span>0.50</span><span>1.00 · Negative</span></div>
+      </div>`;
+  }
+  else if(d.step==='done'){
+    markDone(3); setStep(4);
+    lastResult=d;
+    renderFull(d);
+    document.getElementById('jtog').style.display='block';
+  }
+}
+
+function renderFull(d){
+  const sc=d.sentiment_score??0;
+  const lbl=d.sentiment_label??'Neutral';
+  const col=sc<=0.35?'var(--green)':sc<=0.64?'var(--amber)':'var(--red)';
+  const chips=(d.key_topics??[]).map((t,i)=>`<span class="chip" style="animation-delay:${i*.07}s">${t}</span>`).join('');
+  const pii=d.pii_masked?`<span class="mp pii">✓ PII MASKED${(d.entities_removed??[]).length?` (${d.entities_removed.join(', ')})`:''}` :`<span class="mp pii">✓ NO PII FOUND</span>`;
+  document.getElementById('rb').innerHTML=`
+    <div>
+      <div class="slabel">Sentiment Score</div>
+      <div class="sdisplay">
+        <span class="snum" style="color:${col}">${sc.toFixed(2)}</span>
+        <span class="slbl ${lbl}">${lbl}</span>
+      </div>
+      <div class="gauge-track"><div class="gauge-marker" id="gm" style="left:${Math.round(sc*100)}%"></div></div>
+      <div class="glabels"><span>0.00 · Positive</span><span>0.50</span><span>1.00 · Negative</span></div>
+    </div>
+    <div class="div"></div>
+    <div><div class="slabel">Key Topics</div><div class="chips">${chips||'<span style="color:var(--muted);font-size:13px">None</span>'}</div></div>
+    <div class="div"></div>
+    <div><div class="slabel">Reasoning</div><div class="rbox">${d.reasoning||'—'}</div></div>
+    <div class="mrow">
+      ${pii}
+      ${d.intent?`<span class="mp other">INTENT · ${d.intent.toUpperCase()}</span>`:''}
+      <span class="mp other">LANG · ${d.detected_language==='de'?'DE':'EN'}</span>
+      ${d.pipeline_ms?`<span class="mp other">${d.pipeline_ms}ms total</span>`:''}
+    </div>
+    <div class="div"></div>
+    <div id="jblock" class="jblock">${JSON.stringify(d,null,2)}</div>`;
+}
+</script>
+</body>
+</html>
