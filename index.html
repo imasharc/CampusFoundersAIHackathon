@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0A0D0F;--surface:#111518;--border:#1E2428;--border2:#2A3038;--green:#00E5A0;--amber:#F5A623;--red:#FF4458;--blue:#3D8EFF;--text:#E8EDF2;--muted:#5A6472;--dim:#1E2428}
+:root{--bg:#0A0D0F;--surface:#111518;--border:#1E2428;--border2:#2A3038;--green:#00E5A0;--amber:#F5A623;--red:#FF4458;--blue:#3D8EFF;--text:#E8EDF2;--muted:#4A9B80;--dim:#1E2428}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden}
 body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.4}
@@ -38,7 +38,7 @@ h1 em{font-family:'Instrument Serif',serif;font-style:italic;font-weight:400;col
 .ph{padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .pt{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
 .pb{padding:22px}
-textarea{width:100%;min-height:170px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Instrument Serif',serif;font-size:16px;line-height:1.7;padding:14px 16px;resize:vertical;outline:none;transition:border-color .2s}
+textarea{width:100%;min-height:220px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Instrument Serif',serif;font-size:16px;line-height:1.7;padding:14px 16px;resize:vertical;outline:none;transition:border-color .2s;max-height:400px}
 textarea:focus{border-color:var(--green)}
 textarea::placeholder{color:var(--muted);font-style:italic}
 .exrow{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
@@ -69,7 +69,7 @@ textarea::placeholder{color:var(--muted);font-style:italic}
 .slbl.Positive{background:rgba(0,229,160,.12);color:var(--green)}
 .slbl.Neutral{background:rgba(245,166,35,.12);color:var(--amber)}
 .slbl.Negative{background:rgba(255,68,88,.12);color:var(--red)}
-.gauge-track{height:7px;border-radius:4px;background:linear-gradient(90deg,var(--green),var(--amber) 50%,var(--red));position:relative;margin-bottom:7px}
+.gauge-track{height:7px;border-radius:4px;background:linear-gradient(90deg,var(--red),var(--amber) 50%,var(--green));position:relative;margin-bottom:7px}
 .gauge-marker{position:absolute;top:50%;transform:translate(-50%,-50%);width:16px;height:16px;border-radius:50%;background:var(--bg);border:3px solid #fff;box-shadow:0 0 10px rgba(255,255,255,.3);transition:left .7s cubic-bezier(.34,1.56,.64,1)}
 .glabels{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)}
 .div{height:1px;background:var(--border);margin:18px 0}
@@ -155,15 +155,24 @@ footer{border-top:1px solid var(--border);padding:22px 40px;display:flex;align-i
 <script>
 const API = window.location.origin;
 const EX = [
-  `Hi I'm James Wilson from Manchester, j.wilson@gmail.com — three home defeats and the manager still doesn't change the formation? Eleven goals conceded playing the same high line that's been punished every week. Call me at +44 7891 234567 if anyone wants to discuss this.`,
-  `Last night's match was absolutely incredible — the atmosphere when the equaliser went in was something I haven't felt at this ground in years. The new striker is worth every penny and the way he dropped deep to link play was outstanding. Best football we've played in a long time.`,
-  `Ich heiße Klaus Bauer aus München, k.bauer@web.de — der Schiedsrichter gestern war eine absolute Katastrophe. Der Elfmeter in der 78. Minute war eindeutig, wir bekommen stattdessen in der 82. ein Gegentor. Ich verfolge diesen Verein seit dreißig Jahren.`,
-  `Ich war last night im Stadion — mein erstes Mal in dieser Saison — and the Atmosphäre was electric from the first minute. Das neue Trikot sieht fantastisch aus, I need to order one. My email is seb.hartmann@gmail.com if the shop wants to let me know when XL is back.`,
-  `Hi, I'm Sarah Collins, s.collins@businessfan.co.uk — we run a mid-sized events company and we're interested in corporate hospitality for the second half of the season. Executive boxes for 12-15 people, catering included. Could someone call me on +44 7900 123456?`,
+  `My name is James Wilson and I live in Manchester, you can reach me at j.wilson@gmail.com or call me on +44 7891 234567. I've been a season ticket holder for eleven years and I have to say this season has been an absolute embarrassment from start to finish. Three consecutive home defeats and the manager still refuses to change the formation. We're playing the same high defensive line that has been punished repeatedly — eleven goals conceded in those three games alone, and every single one came from balls played in behind. I sat in Block 14, Row H and watched our centre-backs getting turned inside out for ninety minutes. The worst part is that we have the players to fix it. Our central midfielder has been outstanding this season and he's being wasted in a role that doesn't suit him at all. I've spoken to at least a dozen other supporters who feel exactly the same way. The atmosphere in the stadium has turned toxic and I can't blame the fans. We paid over £800 for our season tickets and this is what we get in return. Unless something changes in January I'll be seriously reconsidering my renewal for next season. I've supported this club through relegation, through financial crisis, through everything — but this is the most frustrated I have ever felt. Please pass this on to whoever needs to hear it.`,
+
+  `I just had to write in because last night's match was one of the most special evenings I've experienced as a football supporter. I've been coming to this ground for over twenty years and the atmosphere when the second equaliser went in was something genuinely extraordinary — the entire stand rose together and it felt like the roof was going to lift off. The new striker has been worth every single penny of his transfer fee. The way he dropped deep in the first half to link play, his movement off the ball in the second half, and of course that finish — driven low into the far corner with the coolest of heads — was absolutely world class. I watched from the away end the last time we played this fixture three years ago and lost 4-1, so to come back and win like that was an unbelievable feeling. The tactical setup from the manager was spot on as well. Playing the high press for the first sixty minutes and then dropping into shape to protect the lead was exactly what was needed. I've seen a lot of football over the years and this team, right now, has something special about it. The young players coming through, the energy on the training ground footage they've been sharing on social media — everything points to something exciting building. Thank you to every player, the staff, and the supporters around me who made it such an unforgettable night.`,
+
+  `Guten Tag, mein Name ist Klaus Bauer, ich wohne in München und bin seit fast dreißig Jahren Mitglied dieses Vereins. Meine E-Mail-Adresse lautet k.bauer@web.de, und Sie erreichen mich unter +49 89 45678901. Ich schreibe Ihnen heute, weil ich nach dem gestrigen Spiel so verärgert bin, dass ich einfach nicht schweigen kann. Die Schiedsrichterleistung war eine absolute Katastrophe — der Elfmeter in der 78. Minute war so eindeutig, dass selbst die Kommentatoren im Fernsehen fassungslos waren, und was bekommen wir stattdessen? In der 82. Minute kassieren wir ein Gegentor aus einer Abseitsposition, die jedes Kind hätte erkennen können. Der Videoassistent hat in dieser Saison mehr Schaden angerichtet als genutzt. Aber das Schiedsrichterproblem ist nur ein Teil meines Ärgers. Die Ticketpreise sind in den letzten drei Jahren um fast vierzig Prozent gestiegen, und die Qualität des Erlebnisses ist gesunken. Die Schlangen an den Imbissständen sind länger als je zuvor, das WLAN im Stadion funktioniert nicht zuverlässig, und die Sicherheitskontrollen am Eingang dauern so lange, dass man die ersten fünfzehn Minuten des Spiels verpasst. Ich liebe diesen Verein von ganzem Herzen und werde ihn immer unterstützen, aber ich erwarte, dass man das Geld der Fans auch respektiert. Ich bitte Sie dringend, diese Rückmeldung ernst zu nehmen.`,
+
+  `So ich war gestern Abend im Stadion. My first time this season actually, ich war die letzten Monate viel auf Reisen für die Arbeit — and honestly the Atmosphäre was something else from the very first minute. Das Stadion war ausverkauft and you could feel the energy even before kick-off, die Fans haben von Anfang an gesungen und die Mannschaft hat das wirklich mitgenommen. The new away kit looks absolutely incredible by the way — das Design ist viel besser als letztes Jahr, I need to order one as soon as possible. My email is seb.hartmann@gmail.com if the club shop wants to let me know when the XL size is back in stock. Ich hab das Spiel mit meinem Bruder und zwei Freunden aus Stuttgart geschaut, and they were blown away by the whole experience — die Organisation, das Essen, die Stimmung, alles hat gestimmt. One of them said it was the best match day experience he'd ever had, and he's been to games across Europe. Die Bratwurst am Stand neben Block 7 war übrigens die beste, die ich je in einem Stadion gegessen habe — seriously impressive. We're already talking about coming back for the next home game. Ein bisschen schade war nur, dass der Livestream auf der Club-App während der zweiten Halbzeit immer wieder abgebrochen ist — meine Freundin wollte das Spiel von zu Hause aus verfolgen and she kept losing the feed. Aber insgesamt: ein fantastischer Abend, weiter so!`,
+
+  `Good afternoon, my name is Sarah Collins and I'm the Head of Events at Meridian Corporate Group, s.collins@meridiangroup.co.uk — you can also reach me directly on +44 7900 123456. I'm writing to enquire about corporate hospitality packages for the second half of the season. Our IBAN is DE89 3704 0044 0532 0130 00. We've been bringing clients to matches for the past four years through a third-party provider but we'd like to explore working directly with the club going forward. Specifically, we're looking for executive box hire for groups of between twelve and eighteen people, with full catering included — ideally a sit-down meal before kick-off rather than a buffet, as our clients tend to be senior executives who appreciate a more formal dining experience. We'd also be very interested in any meet-and-greet or player access opportunities you might offer, as that's something our clients consistently rate as the highlight of the experience. Budget isn't our primary concern — what matters most to us is the quality and exclusivity of the experience. We've heard excellent things about the facilities at your ground and several of our board members are long-standing supporters of the club. We'd be keen to arrange a call or site visit at your earliest convenience to discuss what's possible. Our events calendar for the second half of the season is starting to fill up so the sooner we can confirm arrangements the better. Please do get in touch — I look forward to hearing from you.`,
 ];
 
 function load(i){ document.getElementById('inp').value=EX[i]; updateCount(); }
-function updateCount(){ document.getElementById('ccount').textContent=`${document.getElementById('inp').value.length} chars`; }
+function updateCount(){
+  const len = document.getElementById('inp').value.length;
+  const el = document.getElementById('ccount');
+  el.textContent = `${len} / 3000 chars`;
+  el.style.color = len > 2800 ? 'var(--red)' : len > 2000 ? 'var(--amber)' : 'var(--muted)';
+}
 document.getElementById('inp').addEventListener('input',updateCount);
 document.getElementById('inp').addEventListener('keydown',e=>{ if(e.ctrlKey&&e.key==='Enter') analyse(); });
 
@@ -242,16 +251,16 @@ function handleEvent(d){
     document.getElementById('sr3').classList.add('running');
     const sc=d.sentiment_score??0;
     const lbl=d.sentiment_label??'Neutral';
-    const col=sc<=0.35?'var(--green)':sc<=0.64?'var(--amber)':'var(--red)';
+    const col=sc<=0.30?'var(--green)':sc>=0.50?'var(--red)':'var(--amber)';
     document.getElementById('partial-result').innerHTML=`
       <div style="margin-top:16px">
         <div class="slabel">Sentiment Score</div>
         <div class="sdisplay">
-          <span class="snum" style="color:${col}">${sc.toFixed(2)}</span>
+          <span class="snum" style="color:${col}">${(1-sc).toFixed(2)}</span>
           <span class="slbl ${lbl}">${lbl}</span>
         </div>
-        <div class="gauge-track"><div class="gauge-marker" id="gm" style="left:${Math.round(sc*100)}%"></div></div>
-        <div class="glabels"><span>0.00 · Positive</span><span>0.50</span><span>1.00 · Negative</span></div>
+        <div class="gauge-track"><div class="gauge-marker" id="gm" style="left:${Math.round((1-sc)*100)}%"></div></div>
+        <div class="glabels"><span>0.00 · Negative</span><span>0.50</span><span>1.00 · Positive</span></div>
       </div>`;
   }
   else if(d.step==='done'){
@@ -262,26 +271,68 @@ function handleEvent(d){
   }
 }
 
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
 function renderFull(d){
   const sc=d.sentiment_score??0;
   const lbl=d.sentiment_label??'Neutral';
-  const col=sc<=0.35?'var(--green)':sc<=0.64?'var(--amber)':'var(--red)';
+  const col=sc<=0.30?'var(--green)':sc>=0.50?'var(--red)':'var(--amber)';
   const chips=(d.key_topics??[]).map((t,i)=>`<span class="chip" style="animation-delay:${i*.07}s">${t}</span>`).join('');
   const pii=d.pii_masked?`<span class="mp pii">✓ PII MASKED${(d.entities_removed??[]).length?` (${d.entities_removed.join(', ')})`:''}` :`<span class="mp pii">✓ NO PII FOUND</span>`;
+  const maskedBlock = (() => {
+    const entities = d.pii_entities || [];
+    const orig = document.getElementById('inp')?.value || '';
+    if (!orig) return '';
+    // Sort entities by start position
+    const sorted = [...entities].sort((a,b) => a.start - b.start);
+    const typeColors = {
+      'PERSON':         ['rgba(255,68,88,0.18)',  '#FF4458'],
+      'EMAIL_ADDRESS':  ['rgba(245,166,35,0.18)', '#F5A623'],
+      'PHONE_NUMBER':   ['rgba(61,142,255,0.18)', '#3D8EFF'],
+      'LOCATION':       ['rgba(180,100,255,0.18)','#B464FF'],
+      'IBAN_CODE':      ['rgba(0,229,160,0.18)',  '#00E5A0'],
+      'CREDIT_CARD':    ['rgba(255,160,50,0.18)', '#FFA032'],
+    };
+    let html = '';
+    let cursor = 0;
+    for (const e of sorted) {
+      if (e.start > cursor) html += escHtml(orig.slice(cursor, e.start));
+      const [bg, border] = typeColors[e.type] || ['rgba(0,229,160,0.18)', 'var(--green)'];
+      const label = e.type.replace('_', ' ').replace('ADDRESS','ADDR');
+      html += `<mark style="background:${bg};border:1px solid ${border};border-radius:3px;padding:1px 4px;color:${border};font-family:'JetBrains Mono',monospace;font-size:12px" title="${e.type}">${escHtml(orig.slice(e.start, e.end))}<sup style="font-size:8px;letter-spacing:.5px;margin-left:3px;opacity:.8">${label}</sup></mark>`;
+      cursor = e.end;
+    }
+    if (cursor < orig.length) html += escHtml(orig.slice(cursor));
+    const legend = Object.entries(typeColors).map(([type,[bg,col]])=>
+      `<span style="font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 8px;border-radius:10px;background:${bg};border:1px solid ${col};color:${col}">${type.replace('_ADDRESS','').replace('_NUMBER','')}</span>`
+    ).join('');
+    const hasPii = entities.length > 0;
+    return `
+    <div class="div"></div>
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <div class="slabel" style="margin-bottom:0">${hasPii ? 'PII Detected — Highlighted Before Masking' : 'PII Scan — No Entities Found'}</div>
+        ${hasPii ? `<div style="display:flex;gap:6px;flex-wrap:wrap">${legend}</div>` : ''}
+      </div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-left:3px solid ${hasPii ? 'var(--red)' : 'var(--green)'};border-radius:0 8px 8px 0;padding:13px 16px;font-family:'Instrument Serif',serif;font-size:15px;line-height:1.9;word-break:break-word">${html || '<span style="color:var(--muted);font-style:italic">No text</span>'}</div>
+      ${hasPii ? `<div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">↑ These ${entities.length} span${entities.length>1?'s were':' was'} replaced before sending to Groq · masked text visible in JSON</div>` : ''}
+    </div>`;
+  })();
   document.getElementById('rb').innerHTML=`
     <div>
       <div class="slabel">Sentiment Score</div>
       <div class="sdisplay">
-        <span class="snum" style="color:${col}">${sc.toFixed(2)}</span>
+        <span class="snum" style="color:${col}">${(1-sc).toFixed(2)}</span>
         <span class="slbl ${lbl}">${lbl}</span>
       </div>
-      <div class="gauge-track"><div class="gauge-marker" id="gm" style="left:${Math.round(sc*100)}%"></div></div>
-      <div class="glabels"><span>0.00 · Positive</span><span>0.50</span><span>1.00 · Negative</span></div>
+      <div class="gauge-track"><div class="gauge-marker" id="gm" style="left:${Math.round((1-sc)*100)}%"></div></div>
+      <div class="glabels"><span>0.00 · Negative</span><span>0.50</span><span>1.00 · Positive</span></div>
     </div>
     <div class="div"></div>
     <div><div class="slabel">Key Topics</div><div class="chips">${chips||'<span style="color:var(--muted);font-size:13px">None</span>'}</div></div>
     <div class="div"></div>
     <div><div class="slabel">Reasoning</div><div class="rbox">${d.reasoning||'—'}</div></div>
+    ${maskedBlock}
     <div class="mrow">
       ${pii}
       ${d.intent?`<span class="mp other">INTENT · ${d.intent.toUpperCase()}</span>`:''}

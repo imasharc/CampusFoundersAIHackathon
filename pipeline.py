@@ -29,6 +29,22 @@ _provider = NlpEngineProvider(nlp_configuration={
 _analyzer   = AnalyzerEngine(nlp_engine=_provider.create_engine())
 _anonymizer = AnonymizerEngine()
 
+# ── Custom IBAN recognizer (not built-in to Presidio) ─────────────────────────
+from presidio_analyzer import PatternRecognizer, Pattern as PPattern
+
+_iban_pattern = PPattern(
+    name="iban",
+    # Matches IBANs with or without spaces, e.g. DE94 2342 5254 5253 00 or GB29NWBK60161331926819
+    regex=r'\b[A-Z]{2}[0-9]{2}(?:[ ]?[A-Z0-9]{4}){3,7}(?:[ ]?[A-Z0-9]{1,4})?\b',
+    score=0.85,
+)
+for _lang in ("en", "de"):
+    _analyzer.registry.add_recognizer(PatternRecognizer(
+        supported_entity="IBAN_CODE",
+        patterns=[_iban_pattern],
+        supported_language=_lang,
+    ))
+
 print("All models ready.")
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -58,21 +74,21 @@ def run_pipeline(raw_message: str) -> dict:
     neu = scores.get("neutral",  0)
     sentiment_score = round(neg + neu * 0.5, 4)
     sentiment_label = (
-        "Positive" if sentiment_score <= 0.35 else
-        "Negative" if sentiment_score >= 0.65 else "Neutral"
+        "Positive" if sentiment_score <= 0.30 else
+        "Negative" if sentiment_score >= 0.49 else "Neutral"
     )
 
     # ── 2. Presidio on raw text (local, strips PII) ───────────────────────────
     lang = "de" if _is_german(raw_message) else "en"
     results = _analyzer.analyze(
         text=raw_message, language=lang,
-        entities=["PERSON","EMAIL_ADDRESS","PHONE_NUMBER","LOCATION"],
+        entities=["PERSON","EMAIL_ADDRESS","PHONE_NUMBER","LOCATION","IBAN_CODE","CREDIT_CARD"],
         score_threshold=0.4,
     )
     masked_text = _anonymizer.anonymize(raw_message, results).text if results else raw_message
 
-    # ── 3. Groq (LLaMA 3.3) on masked text + sentiment score ─────────────────────
-    llm = _groq_call(masked_text, sentiment_label, sentiment_score)
+    # ── 3. Fireworks API on masked text + sentiment score ─────────────────────
+    llm = _fireworks_call(masked_text, sentiment_label, sentiment_score)
 
     return {
         "sentiment_score":  sentiment_score,
@@ -83,11 +99,13 @@ def run_pipeline(raw_message: str) -> dict:
         "topic":            llm.get("key_topics", ["Other"])[0] if llm.get("key_topics") else "Other",
         "confidence":       llm.get("confidence", 0.0),
         "pii_masked":       len(results) > 0,
+        "masked_text":      masked_text,
+        "pii_entities":     [{"type": r.entity_type, "start": r.start, "end": r.end} for r in results],
         "processed_at":     datetime.datetime.utcnow().isoformat() + "Z",
     }
 
 
-def _groq_call(masked_text, sentiment_label, sentiment_score):
+def _fireworks_call(masked_text, sentiment_label, sentiment_score):
     prompt = f"""You are a football fan message classifier.
 
 Pre-scored sentiment: {sentiment_label} ({sentiment_score:.2f} where 0=positive 1=negative).
@@ -125,9 +143,9 @@ Return ONLY valid JSON, nothing else:
         timeout=15,
     )
     
-    # Print the actual API error instead of crashing blindly
+    # 2. INSTEAD of blindly crashing, print the actual JSON error from Fireworks
     if not resp.ok:
-        print(f"\n❌ GROQ API ERROR {resp.status_code} ❌", flush=True)
+        print(f"\n❌ FIREWORKS API ERROR {resp.status_code} ❌", flush=True)
         print(resp.text, flush=True)
         print("-----------------------------------\n", flush=True)
         resp.raise_for_status()

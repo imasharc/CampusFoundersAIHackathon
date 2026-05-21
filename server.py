@@ -1,142 +1,135 @@
-# pipeline.py
-import os, json, datetime
-import requests
-from dotenv import load_dotenv
+# server.py
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, StreamingResponse
+import json
+import asyncio
+import pandas as pd
+from pydantic import BaseModel
+from pathlib import Path
+import pipeline as pl
+import os
 
-load_dotenv()
+app = FastAPI(title="Raumdeuter Fan Intelligence")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-# ── load once at startup, not per request ─────────────────────────────────────
-from transformers import pipeline as hf_pipeline
-from presidio_analyzer import AnalyzerEngine
-from presidio_analyzer.nlp_engine import NlpEngineProvider
-from presidio_anonymizer import AnonymizerEngine
+# Prefer GROQ_API_KEY, fall back to FIREWORKS_API_KEY for backwards compat
+_key = os.environ.get("GROQ_API_KEY") or os.environ.get("FIREWORKS_API_KEY")
+print("Key loaded status:", bool(_key), flush=True)
 
-print("Loading RoBERTa...")
-_sentiment = hf_pipeline(
-    "text-classification",
-    model="cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual",
-    top_k=None, truncation=True, max_length=512,
-)
+DATASET_PATH = "fan_dataset_200_scored.xlsx"
 
-print("Loading Presidio (EN + DE)...")
-_provider = NlpEngineProvider(nlp_configuration={
-    "nlp_engine_name": "spacy",
-    "models": [
-        {"lang_code": "en", "model_name": "en_core_web_lg"},
-        {"lang_code": "de", "model_name": "de_core_news_lg"},
-    ],
-})
-_analyzer   = AnalyzerEngine(nlp_engine=_provider.create_engine())
-_anonymizer = AnonymizerEngine()
+class Request(BaseModel):
+    message: str
 
-print("All models ready.")
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def ui():
+    return HTMLResponse(Path("index.html").read_text(encoding="utf-8"))
 
-# ─────────────────────────────────────────────────────────────────────────────
+@app.post("/analyse")
+def analyse(req: Request):
+    try:
+        return pl.run_pipeline(req.message)
+    except Exception as e:
+        raise HTTPException(500, detail=str(e))
 
-FEW_SHOT = """
-Examples:
-"[PERSON] performance was shocking, same tactics every game" → topics: ["Team Performance","Tactics"] intent: complaint
-"When do season tickets go on sale?" → topics: ["Season Tickets","Ticket Booking"] intent: inquiry  
-"Atmosphere last night was electric, best match in years" → topics: ["Atmosphere","Stadium Experience"] intent: praise
-"Ich war begeistert aber die Preise sind unverschämt hoch" → topics: ["Atmosphere","Ticket Pricing"] intent: complaint
-"New striker is incredible, totally transformed us going forward" → topics: ["Player Performance","Team Performance"] intent: praise
-"""
+@app.post("/analyse/stream")
+async def analyse_stream(req: Request):
+    async def event_generator():
+        # 1. Signal that RoBERTa is starting
+        e1 = json.dumps({"step": "roberta_start"})
+        yield "data: " + e1 + "\n\n"
 
-TOPICS = [
-    "Team Performance","Player Performance","Tactics","Match Outcome","Refereeing",
-    "Ticket Pricing","Ticket Booking","Season Tickets","Merchandise",
-    "Stadium Experience","Atmosphere","Food & Drink","Accessibility",
-    "Club Communication","Transfer News","Manager","Youth Academy",
-    "Excitement","Frustration","Praise",
-]
+        # 2. Run the full pipeline in a thread (RoBERTa → Presidio → Groq)
+        result = await asyncio.to_thread(pl.run_pipeline, req.message)
 
-def run_pipeline(raw_message: str) -> dict:
+        # 3. Sentiment + PII done — fire scores so the UI can render the gauge
+        e2 = json.dumps({
+            "step": "sentiment_done",
+            "sentiment_score": result.get("sentiment_score"),
+            "sentiment_label": result.get("sentiment_label"),
+            "pii_masked": result.get("pii_masked"),
+        })
+        yield "data: " + e2 + "\n\n"
 
-    # ── 1. RoBERTa on raw text (local, sees full context before masking) ──────
-    scores = {s["label"].lower(): s["score"] for s in _sentiment(raw_message)[0]}
-    neg = scores.get("negative", 0)
-    neu = scores.get("neutral",  0)
-    sentiment_score = round(neg + neu * 0.5, 4)
-    sentiment_label = (
-        "Positive" if sentiment_score <= 0.35 else
-        "Negative" if sentiment_score >= 0.65 else "Neutral"
-    )
+        # 4. Short pause so the final panel doesn't flash in instantly
+        await asyncio.sleep(0.3)
 
-    # ── 2. Presidio on raw text (local, strips PII) ───────────────────────────
-    lang = "de" if _is_german(raw_message) else "en"
-    results = _analyzer.analyze(
-        text=raw_message, language=lang,
-        entities=["PERSON","EMAIL_ADDRESS","PHONE_NUMBER","LOCATION"],
-        score_threshold=0.4,
-    )
-    masked_text = _anonymizer.anonymize(raw_message, results).text if results else raw_message
+        # 5. Full payload — triggers complete result render
+        result["step"] = "done"
+        yield "data: " + json.dumps(result) + "\n\n"
 
-    # ── 3. Groq (LLaMA 3.3) on masked text + sentiment score ─────────────────────
-    llm = _groq_call(masked_text, sentiment_label, sentiment_score)
-
-    return {
-        "sentiment_score":  sentiment_score,
-        "sentiment_label":  sentiment_label,
-        "reasoning":        llm.get("reasoning", ""),
-        "key_topics":       llm.get("key_topics", []),
-        "intent":           llm.get("intent", "other"),
-        "topic":            llm.get("key_topics", ["Other"])[0] if llm.get("key_topics") else "Other",
-        "confidence":       llm.get("confidence", 0.0),
-        "pii_masked":       len(results) > 0,
-        "processed_at":     datetime.datetime.utcnow().isoformat() + "Z",
-    }
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-def _groq_call(masked_text, sentiment_label, sentiment_score):
-    prompt = f"""You are a football fan message classifier.
+@app.get("/evaluate/quick")
+async def evaluate_quick(n: int = Query(default=20, ge=5, le=100)):
+    """
+    Run RoBERTa-only sentiment evaluation on n messages from the dataset.
+    Fast — no LLM calls, purely local inference. Returns accuracy breakdown.
+    """
+    if not Path(DATASET_PATH).exists():
+        raise HTTPException(
+            404,
+            detail=f"Dataset not found. Place '{DATASET_PATH}' in the project root."
+        )
 
-Pre-scored sentiment: {sentiment_label} ({sentiment_score:.2f} where 0=positive 1=negative).
-Trust this score. Your job is topics + reasoning only.
-
-{FEW_SHOT}
-
-Message: "{masked_text}"
-Topics to choose from: {TOPICS}
-
-Return ONLY valid JSON, nothing else:
-{{
-  "key_topics": ["2-4 topics from the list above"],
-  "intent": "complaint|inquiry|praise|other",
-  "confidence": 0.0-1.0,
-  "reasoning": "1-2 sentences: what phrases drove the sentiment, what is the comment about"
-}}"""
-
-    # 1. Strip hidden spaces/newlines from the .env file that corrupt HTTP headers
-    api_key = os.environ.get('GROQ_API_KEY', '').strip()
-
-    resp = requests.post(
-        "https://api.groq.com/openai/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {os.environ['GROQ_API_KEY'].strip()}",
-            "Content-Type": "application/json",
-        },
-        json={
-            "model": "llama-3.3-70b-versatile",
-            "messages": [{"role": "user", "content": prompt}],
-            "response_format": {"type": "json_object"},
-            "temperature": 0.1,
-            "max_tokens": 200,
-        },
-        timeout=15,
-    )
-    
-    # Print the actual API error instead of crashing blindly
-    if not resp.ok:
-        print(f"\n❌ GROQ API ERROR {resp.status_code} ❌", flush=True)
-        print(resp.text, flush=True)
-        print("-----------------------------------\n", flush=True)
-        resp.raise_for_status()
+    df = pd.read_excel(DATASET_PATH, sheet_name="Fan Messages")
+    df.columns = df.columns.str.strip()
 
     try:
-        return json.loads(resp.json()["choices"][0]["message"]["content"])
-    except (json.JSONDecodeError, KeyError):
-        return {"key_topics": [], "intent": "other", "confidence": 0.0, "reasoning": ""}
+        raw_col  = next(c for c in df.columns if "Raw Message" in c)
+        sent_col = next(c for c in df.columns if "Sentiment" in c)
+    except StopIteration:
+        raise HTTPException(500, detail="Expected columns 'Raw Message' and 'Sentiment' not found.")
 
-def _is_german(text: str) -> bool:
-    de = {"ich","bin","habe","nicht","das","ist","und","mit","für","eine","mein","war","sie","wir"}
-    return len(set(text.lower().split()) & de) >= 2
+    sample = df.sample(min(n, len(df)), random_state=42)
+
+    def run_eval():
+        correct = 0
+        results = []
+        label_map = {"positive": 0, "neutral": 0, "negative": 0}
+        for _, row in sample.iterrows():
+            raw        = str(row[raw_col])
+            true_label = str(row[sent_col]).strip().lower()
+
+            scores = {s["label"].lower(): s["score"] for s in pl._sentiment(raw)[0]}
+            neg    = scores.get("negative", 0)
+            neu    = scores.get("neutral",  0)
+            score  = round(neg + neu * 0.5, 4)
+            pred   = (
+                "positive" if score <= 0.35 else
+                "negative" if score >= 0.65 else "neutral"
+            )
+
+            match = pred == true_label
+            if match:
+                correct += 1
+            label_map[true_label] = label_map.get(true_label, 0) + 1
+
+            results.append({
+                "text":       raw[:90] + ("…" if len(raw) > 90 else ""),
+                "true":       true_label.capitalize(),
+                "pred":       pred.capitalize(),
+                "score":      score,
+                "match":      match,
+            })
+
+        accuracy = round(correct / len(sample), 3) if sample.shape[0] > 0 else 0
+        wrong    = [r for r in results if not r["match"]]
+        return {
+            "accuracy":         accuracy,
+            "correct":          correct,
+            "total":            len(sample),
+            "label_breakdown":  label_map,
+            "wrong_predictions": wrong[:10],   # cap at 10 for UI
+            "all_results":       results,
+        }
+
+    data = await asyncio.to_thread(run_eval)
+    return data
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
