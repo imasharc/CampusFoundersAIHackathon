@@ -27,9 +27,9 @@ h1 em{font-family:'Instrument Serif',serif;font-style:italic;font-weight:400;col
 .pbox{display:flex;flex-direction:column;padding:10px 14px;border:1px solid var(--border2);border-radius:8px;background:var(--surface);min-width:120px;flex-shrink:0;transition:border-color .3s}
 .pbox.lit{border-color:var(--green)}
 .pbox.lit .pname{color:var(--green)}
-.pnum{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:3px}
-.pname{font-size:11px;font-weight:700;letter-spacing:.5px}
-.ptech{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:2px}
+.pnum{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--green);letter-spacing:1px;margin-bottom:3px;font-weight:700}
+.pname{font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--text)}
+.ptech{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:3px}
 .parr{width:24px;height:1px;background:var(--border2);flex-shrink:0;position:relative}
 .parr::after{content:'›';position:absolute;right:-5px;top:-9px;font-size:14px;color:var(--border2)}
 .main{max-width:1100px;margin:0 auto;padding:0 40px 80px;display:grid;grid-template-columns:1fr 1fr;gap:28px;position:relative;z-index:1}
@@ -100,14 +100,14 @@ footer{border-top:1px solid var(--border);padding:22px 40px;display:flex;align-i
 <section class="hero">
   <div class="eyebrow">Fan Intelligence Pipeline</div>
   <h1>Football fans.<br><em>Real insights.</em><br>Zero PII.</h1>
-  <p class="sub">Paste any fan comment in English, German, or both. Presidio strips PII locally. RoBERTa scores sentiment. Fireworks/Llama classifies topics. Nothing with personal data leaves this server.</p>
+  <p class="sub">Paste any fan comment in English or German. RoBERTa scores sentiment on the raw text first. Presidio then strips PII locally. Only the masked text is sent to LLaMA 3.3 via Groq for topic classification. Nothing with personal data ever leaves this server.</p>
 
   <div class="pipe-strip">
-    <div class="pbox" id="ps1"><span class="pnum">01</span><span class="pname">PII Masking</span><span class="ptech">Presidio (local)</span></div>
+    <div class="pbox" id="ps1"><span class="pnum">01</span><span class="pname">Sentiment</span><span class="ptech">XLM-RoBERTa (local)</span></div>
     <div class="parr"></div>
-    <div class="pbox" id="ps2"><span class="pnum">02</span><span class="pname">Sentiment</span><span class="ptech">XLM-RoBERTa</span></div>
+    <div class="pbox" id="ps2"><span class="pnum">02</span><span class="pname">PII Masking</span><span class="ptech">Presidio (local)</span></div>
     <div class="parr"></div>
-    <div class="pbox" id="ps3"><span class="pnum">03</span><span class="pname">Topics + Reason</span><span class="ptech">Llama 3.1 (Fireworks)</span></div>
+    <div class="pbox" id="ps3"><span class="pnum">03</span><span class="pname">Topics + Reason</span><span class="ptech">LLaMA 3.3 (Groq)</span></div>
     <div class="parr"></div>
     <div class="pbox" id="ps4"><span class="pnum">04</span><span class="pname">JSON Output</span><span class="ptech">Dashboard / CRM</span></div>
   </div>
@@ -148,7 +148,7 @@ footer{border-top:1px solid var(--border);padding:22px 40px;display:flex;align-i
   <div class="fl">RAUMDEUTER AI HACKATHON · FAN INTELLIGENCE PIPELINE</div>
   <div style="display:flex;gap:10px">
     <span class="sb">Presidio</span><span class="sb">XLM-RoBERTa</span>
-    <span class="sb">Llama 3.1</span><span class="sb">FastAPI</span>
+    <span class="sb">Groq · LLaMA 3.3</span><span class="sb">FastAPI</span>
   </div>
 </footer>
 
@@ -183,9 +183,9 @@ async function analyse(){
   // Show live step indicators
   document.getElementById('rb').innerHTML=`
     <div class="steps-live">
-      <div class="step-row running" id="sr1"><div class="step-icon">1</div>PII MASKING — Presidio scanning…</div>
-      <div class="step-row" id="sr2"><div class="step-icon">2</div>SENTIMENT — waiting for step 1…</div>
-      <div class="step-row" id="sr3"><div class="step-icon">3</div>TOPICS & REASON — waiting for step 2…</div>
+      <div class="step-row running" id="sr1"><div class="step-icon">1</div>ROBERTA — Scoring sentiment on raw text…</div>
+      <div class="step-row" id="sr2"><div class="step-icon">2</div>PRESIDIO — PII detection & masking…</div>
+      <div class="step-row" id="sr3"><div class="step-icon">3</div>GROQ / LLAMA — Topic classification…</div>
     </div>
     <div id="partial-result"></div>`;
 
@@ -231,17 +231,15 @@ function markDone(n){ const r=document.getElementById(`sr${n}`); if(r){r.classLi
 function markRunning(n){ const r=document.getElementById(`sr${n}`); if(r){r.classList.add('running');} }
 
 function handleEvent(d){
-  if(d.step==='pii_done'){
-    markDone(1); markRunning(2); setStep(2);
-    document.getElementById('sr2').textContent='';
-    document.getElementById('sr2').innerHTML=`<div class="step-icon">2</div>SENTIMENT — running RoBERTa…`;
-    document.getElementById('sr2').classList.add('running');
+  if(d.step==='roberta_start'){
+    // Pipeline just started — RoBERTa is running
+    setStep(1);
   }
   else if(d.step==='sentiment_done'){
-    markDone(2); markRunning(3); setStep(3);
-    document.getElementById('sr3').innerHTML=`<div class="step-icon">3</div>TOPICS — LLM classifying…`;
+    // RoBERTa + Presidio both done — show sentiment, mark Groq as running
+    markDone(1); markDone(2); markRunning(3); setStep(3);
+    document.getElementById('sr3').innerHTML=`<div class="step-icon">3</div>GROQ / LLAMA — Classifying topics…`;
     document.getElementById('sr3').classList.add('running');
-    // Show sentiment immediately
     const sc=d.sentiment_score??0;
     const lbl=d.sentiment_label??'Neutral';
     const col=sc<=0.35?'var(--green)':sc<=0.64?'var(--amber)':'var(--red)';
@@ -294,5 +292,117 @@ function renderFull(d){
     <div id="jblock" class="jblock">${JSON.stringify(d,null,2)}</div>`;
 }
 </script>
+<!-- ── EVAL PANEL ─────────────────────────────────────────────────────── -->
+<style>
+.eval-wrap{max-width:1100px;margin:0 auto 60px;padding:0 40px;position:relative;z-index:1}
+@media(max-width:768px){.eval-wrap{padding:0 20px}}
+.eval-panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.eval-header{padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.eval-body{padding:22px}
+.eval-meta{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.5px}
+.ebtn{padding:10px 22px;background:transparent;border:1px solid var(--green);border-radius:8px;color:var(--green);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.ebtn:hover:not(:disabled){background:rgba(0,229,160,.1);box-shadow:0 0 20px rgba(0,229,160,.2)}
+.ebtn:disabled{opacity:.4;cursor:not-allowed}
+.eval-big{display:flex;align-items:baseline;gap:12px;margin:16px 0 8px}
+.eval-acc{font-size:56px;font-weight:800;letter-spacing:-3px;line-height:1}
+.eval-of{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)}
+.eval-breakdown{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.ebc{font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 12px;border-radius:20px;border:1px solid var(--border2);color:var(--muted);background:var(--dim)}
+.eval-table{width:100%;border-collapse:collapse;font-size:12px}
+.eval-table th{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border);text-align:left}
+.eval-table td{padding:8px 12px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text)}
+.eval-table tr:last-child td{border-bottom:none}
+.eval-table .wrong td{color:var(--red)}
+.eval-nsamples{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.eval-nsamples input{width:52px;background:var(--bg);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 8px;text-align:center;outline:none}
+.eval-nsamples input:focus{border-color:var(--green)}
+.eval-empty{padding:30px;text-align:center;font-family:'Instrument Serif',serif;font-style:italic;color:var(--muted);font-size:14px;line-height:1.7}
+</style>
+
+<div class="eval-wrap">
+  <div class="eval-panel">
+    <div class="eval-header">
+      <div>
+        <span class="pt" style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Sentiment Evaluation</span>
+        <div class="eval-meta" style="margin-top:4px">RoBERTa vs ground truth labels · local only · no LLM calls</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div class="eval-nsamples">
+          <span>N =</span>
+          <input type="number" id="eval-n" value="20" min="5" max="100">
+          <span>messages</span>
+        </div>
+        <button class="ebtn" id="eval-btn" onclick="runEval()">Run Evaluation →</button>
+      </div>
+    </div>
+    <div class="eval-body" id="eval-body">
+      <div class="eval-empty">
+        Click <strong>Run Evaluation</strong> to test RoBERTa sentiment accuracy against your dataset.<br>
+        Samples are drawn randomly from <code style="font-size:12px">fan_dataset_200_final.xlsx</code>.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function runEval(){
+  const btn = document.getElementById('eval-btn');
+  const n   = parseInt(document.getElementById('eval-n').value) || 20;
+  btn.disabled = true;
+  btn.textContent = 'Running…';
+  document.getElementById('eval-body').innerHTML = `
+    <div class="eval-empty">Running RoBERTa on ${n} messages…<br><span style="font-size:12px">This takes ~${Math.round(n*0.6)}s (local inference only)</span></div>`;
+
+  try {
+    const r = await fetch(`${API}/evaluate/quick?n=${n}`);
+    if(!r.ok){
+      const e = await r.json();
+      throw new Error(e.detail || r.statusText);
+    }
+    const d = await r.json();
+    renderEval(d);
+  } catch(err){
+    document.getElementById('eval-body').innerHTML = `
+      <div style="padding:20px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--red)">
+        ✗ ${err.message}
+      </div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Run Evaluation →';
+  }
+}
+
+function renderEval(d){
+  const pct  = Math.round(d.accuracy * 100);
+  const col  = pct >= 75 ? 'var(--green)' : pct >= 50 ? 'var(--amber)' : 'var(--red)';
+  const bd   = d.label_breakdown || {};
+  const rows = (d.wrong_predictions || []).map(r => `
+    <tr class="wrong">
+      <td>${r.text}</td>
+      <td>${r.true}</td>
+      <td>${r.pred}</td>
+      <td>${r.score.toFixed(3)}</td>
+    </tr>`).join('');
+
+  document.getElementById('eval-body').innerHTML = `
+    <div class="eval-big">
+      <span class="eval-acc" style="color:${col}">${pct}%</span>
+      <span class="eval-of">${d.correct} / ${d.total} correct</span>
+    </div>
+    <div class="eval-breakdown">
+      ${Object.entries(bd).map(([l,c])=>`<span class="ebc">${l.toUpperCase()} · ${c} samples</span>`).join('')}
+    </div>
+    ${rows ? `
+    <div class="div" style="height:1px;background:var(--border);margin:16px 0"></div>
+    <div class="slabel">Wrong Predictions (up to 10)</div>
+    <div style="overflow-x:auto;margin-top:10px">
+      <table class="eval-table">
+        <thead><tr><th>Message</th><th>True</th><th>Predicted</th><th>Score</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>` : `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green);margin-top:8px">✓ All predictions correct in this sample</div>`}`;
+}
+</script>
+
 </body>
 </html>

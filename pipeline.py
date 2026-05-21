@@ -71,8 +71,8 @@ def run_pipeline(raw_message: str) -> dict:
     )
     masked_text = _anonymizer.anonymize(raw_message, results).text if results else raw_message
 
-    # ── 3. Fireworks API on masked text + sentiment score ─────────────────────
-    llm = _fireworks_call(masked_text, sentiment_label, sentiment_score)
+    # ── 3. Groq (LLaMA 3.3) on masked text + sentiment score ─────────────────────
+    llm = _groq_call(masked_text, sentiment_label, sentiment_score)
 
     return {
         "sentiment_score":  sentiment_score,
@@ -87,7 +87,7 @@ def run_pipeline(raw_message: str) -> dict:
     }
 
 
-def _fireworks_call(masked_text, sentiment_label, sentiment_score):
+def _groq_call(masked_text, sentiment_label, sentiment_score):
     prompt = f"""You are a football fan message classifier.
 
 Pre-scored sentiment: {sentiment_label} ({sentiment_score:.2f} where 0=positive 1=negative).
@@ -125,9 +125,9 @@ Return ONLY valid JSON, nothing else:
         timeout=15,
     )
     
-    # 2. INSTEAD of blindly crashing, print the actual JSON error from Fireworks
+    # Print the actual API error instead of crashing blindly
     if not resp.ok:
-        print(f"\n❌ FIREWORKS API ERROR {resp.status_code} ❌", flush=True)
+        print(f"\n❌ GROQ API ERROR {resp.status_code} ❌", flush=True)
         print(resp.text, flush=True)
         print("-----------------------------------\n", flush=True)
         resp.raise_for_status()
