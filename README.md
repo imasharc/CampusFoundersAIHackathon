@@ -1,3 +1,14 @@
+---
+title: Raumdeuter Fan Intelligence
+emoji: ⚽
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+short_description: GDPR-compliant real-time football fan feedback analysis
+---
+
 # Raumdeuter — Fan Intelligence Pipeline
 
 > **GDPR-compliant, real-time football fan feedback analysis.**  
