@@ -170,3 +170,4 @@ Return ONLY valid JSON, nothing else:
 def _is_german(text: str) -> bool:
     de = {"ich","bin","habe","nicht","das","ist","und","mit","für","eine","mein","war","sie","wir"}
     return len(set(text.lower().split()) & de) >= 2
+    
