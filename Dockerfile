@@ -25,11 +25,12 @@ RUN pip install --no-cache-dir \
 RUN python -m spacy download en_core_web_lg
 RUN python -m spacy download de_core_news_lg
 
-# Pre-cache RoBERTa weights into the image so first request is instant
-RUN python -c "\
-from transformers import pipeline; \
-pipeline('text-classification', model='cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual', top_k=None); \
-print('RoBERTa weights cached.')"
+# Takes to much memory on pre-load so it is commented out
+# # Pre-cache RoBERTa weights into the image so first request is instant
+# RUN python -c "\
+# from transformers import pipeline; \
+# pipeline('text-classification', model='cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual', top_k=None); \
+# print('RoBERTa weights cached.')"
 
 # Copy application files
 COPY pipeline.py server.py index.html ./
