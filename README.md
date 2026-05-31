@@ -1,71 +1,88 @@
----
-title: Raumdeuter Fan Intelligence
-emoji: ⚽
-colorFrom: green
-colorTo: blue
-sdk: docker
-app_port: 7860
-pinned: false
-short_description: GDPR-compliant real-time football fan feedback analysis
----
-
 # Raumdeuter — Fan Intelligence Pipeline
 
 > **GDPR-compliant, real-time football fan feedback analysis.**  
 > Multilingual (EN + DE) · Sentiment · PII masking · Topic classification
 
+Built at the **CampusFounders AI Hackathon 2025** by Team 14 — Antoni Malinowski, Malak Abdallah, Omar Azlan, Abdallah Dinc.
+
 ---
 
-## How it works
+## Two modes
 
-Three steps run in sequence every time a message is submitted:
+### Local (full pipeline)
+
+Run locally to get the complete 3-step pipeline with local ML inference:
 
 ```
 Raw fan message
       │
       ▼
 ┌─────────────────────────────┐
-│  01  XLM-RoBERTa  (local)  │  Scores sentiment on the full raw text
+│  01  XLM-RoBERTa  (local)  │  Multilingual sentiment scoring on the
+│                             │  raw text — no data leaves the machine
 └─────────────────────────────┘
       │
       ▼
 ┌─────────────────────────────┐
 │  02  Presidio      (local)  │  Detects & masks PII — names, emails,
-│                             │  phone numbers, locations
+│                             │  phones, IBANs, credit cards (EN + DE)
 └─────────────────────────────┘
       │  (only masked text proceeds)
       ▼
 ┌─────────────────────────────┐
-│  03  LLaMA 3.3 via Groq     │  Classifies topics + generates reasoning
+│  03  LLaMA 3.3 via Groq     │  Topic classification + reasoning
+└─────────────────────────────┘
+```
+
+Sentiment is scored by RoBERTa **before** PII masking — so it sees the full original message for maximum accuracy. The score is passed to Groq as context; the LLM only classifies topics.
+
+### Deployed / Railway (lightweight)
+
+The Railway deployment strips PyTorch and the large spaCy models to keep the Docker image under 300 MB. Presidio still runs locally inside the container — PII never leaves. Groq handles both sentiment and topics in a single call.
+
+```
+Raw fan message
+      │
+      ▼
+┌─────────────────────────────┐
+│  01  Presidio      (local)  │  PII masking (spaCy sm models, ~30 MB)
 └─────────────────────────────┘
       │
       ▼
-  JSON result
+┌─────────────────────────────┐
+│  02  LLaMA 3.3 via Groq     │  Sentiment + topics + reasoning
+└─────────────────────────────┘
 ```
 
-**PII never leaves the machine.** RoBERTa and Presidio run entirely locally. Only the masked text reaches the cloud LLM.
+| | Local | Deployed |
+|--|-------|----------|
+| Sentiment engine | XLM-RoBERTa (local) | LLaMA 3.3 via Groq |
+| spaCy models | `en/de_core_web_lg` (~1.6 GB) | `en/de_core_web_sm` (~30 MB) |
+| PyTorch required | Yes | No |
+| Docker image size | ~5 GB | ~300 MB |
+| GDPR — PII leaves machine | Never | Never |
 
 ---
 
 ## Stack
 
-| Component | Role |
-|-----------|------|
-| FastAPI + uvicorn | Backend server, serves the UI |
-| `cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual` | Local sentiment scoring (EN + DE) |
-| Microsoft Presidio + spaCy | Local PII detection and anonymisation |
-| Groq API — LLaMA 3.3 70B | Topic classification and reasoning |
-| uv | Python dependency + environment management |
+| Component | Local | Deployed |
+|-----------|-------|----------|
+| FastAPI + uvicorn | ✓ | ✓ |
+| XLM-RoBERTa (sentiment) | ✓ local inference | — |
+| Microsoft Presidio + spaCy lg | ✓ | — |
+| Microsoft Presidio + spaCy sm | — | ✓ |
+| Groq API — LLaMA 3.3 70B | topics only | sentiment + topics |
+| uv | ✓ | — |
 
 ---
 
 ## Prerequisites
 
-| Tool | Min version | Install check |
-|------|------------|---------------|
+| Tool | Min version | Check |
+|------|------------|-------|
 | Python | 3.11 | `python --version` |
 | uv | any | `uv --version` |
-| Git | any | `git --version` |
 
 **Install uv:**
 
@@ -77,24 +94,23 @@ powershell -ExecutionPolicy BypassPolicy -c "irm https://astral.sh/uv/install.ps
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Restart your terminal after installing.
-
 ---
 
 ## Setup
 
-### 1. Clone and install dependencies
+### Local (full pipeline with RoBERTa)
+
+### 1. Clone and install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/CampusFoundersAIHackathon.git
+git clone https://github.com/imasharc/CampusFoundersAIHackathon.git
 cd CampusFoundersAIHackathon
-
 uv sync
 ```
 
-First run downloads PyTorch + Transformers (~2 GB). Get a coffee.
+First run downloads PyTorch + Transformers (~2 GB).
 
-### 2. Download spaCy language models (one-time, ~800 MB)
+### 2. Download spaCy models (one-time, ~1.6 GB)
 
 ```bash
 uv run python -m spacy download en_core_web_lg
@@ -107,22 +123,21 @@ uv run python -m spacy download de_core_news_lg
 2. Sign up — GitHub login works, no credit card needed
 3. **API Keys → Create API Key** — copy the key (starts with `gsk_`)
 
-### 4. Create `.env` in the project root
+### 4. Create `.env`
 
 ```env
 GROQ_API_KEY=gsk_your_key_here
 ```
 
-> `.env` is in `.gitignore` — it will never be committed.
+> `.env` is in `.gitignore` — never committed.
 
-### 5. Run the server
+### 5. Run
 
 ```bash
 uv run uvicorn server:app --host 0.0.0.0 --port 8000
 ```
 
-Wait for all three lines before opening the browser:
-
+Wait for:
 ```
 Loading RoBERTa...
 Loading Presidio (EN + DE)...
@@ -130,12 +145,25 @@ All models ready.
 Key loaded status: True
 ```
 
-First startup downloads RoBERTa weights (~500 MB). Subsequent starts are fast.
-
-### 6. Open the app
+### 6. Open
 
 ```
 http://localhost:8000
+```
+
+---
+
+### Lightweight mode (matches the Railway deployment)
+
+To run the same lightweight version locally — no PyTorch, small spaCy models:
+
+```bash
+# Switch to small spaCy models
+uv run python -m spacy download en_core_web_sm
+uv run python -m spacy download de_core_news_sm
+
+# Use the lightweight pipeline (pipeline_light.py or swap pipeline.py)
+uv run uvicorn server:app --host 0.0.0.0 --port 8000
 ```
 
 ---
@@ -144,23 +172,21 @@ http://localhost:8000
 
 ```
 .
-├── pipeline.py                   # Core pipeline: RoBERTa → Presidio → Groq
-├── server.py                     # FastAPI: /analyse/stream, /evaluate/quick, /health
-├── index.html                    # Single-file UI (served by FastAPI at /)
-├── evaluate.py                   # Full batch evaluation against the dataset
-├── score_dataset.py              # Adds numeric 0–1 scores to the Excel dataset
-├── pyproject.toml                # Dependencies managed by uv
-├── .env                          # API keys — NOT committed
-├── fan_dataset_200_final.xlsx    # Raw labeled dataset (200 messages, EN + DE)
-└── fan_dataset_200_scored.xlsx   # Dataset + RoBERTa sentiment_score column
+├── pipeline.py        # Full pipeline: RoBERTa → Presidio lg → Groq (local)
+├── pipeline_light.py  # Lightweight: Presidio sm → Groq (deployed)
+├── server.py          # FastAPI: /analyse/stream, /analyse, /health
+├── index.html         # Single-file UI served at /
+├── pyproject.toml     # Dependencies (uv)
+├── Dockerfile         # Lightweight build for Railway
+└── .env               # API keys — NOT committed
 ```
 
 ---
 
-## API reference
+## API
 
 ### `POST /analyse/stream`
-Streams results via Server-Sent Events as each pipeline step completes.
+Server-Sent Events — streams results as steps complete.
 
 ```bash
 curl -N -X POST http://localhost:8000/analyse/stream \
@@ -168,10 +194,10 @@ curl -N -X POST http://localhost:8000/analyse/stream \
   -d '{"message": "The atmosphere last night was electric!"}'
 ```
 
-Events in order: `roberta_start` → `sentiment_done` → `done`
+Events: `roberta_start` → `sentiment_done` → `done`
 
 ### `POST /analyse`
-Synchronous — returns full JSON result in one shot.
+Synchronous — returns full JSON in one shot.
 
 ```bash
 curl -X POST http://localhost:8000/analyse \
@@ -181,44 +207,45 @@ curl -X POST http://localhost:8000/analyse \
 
 ```json
 {
-  "sentiment_score": 0.81,
-  "sentiment_label": "Negative",
-  "key_topics": ["Ticket Pricing"],
-  "intent": "complaint",
-  "confidence": 0.92,
-  "reasoning": "Strong negative framing around pricing...",
-  "pii_masked": false,
-  "processed_at": "2025-05-21T10:00:00Z"
+  "sentiment_score":  0.85,
+  "sentiment_label":  "Negative",
+  "key_topics":       ["Ticket Pricing"],
+  "intent":           "complaint",
+  "confidence":       0.92,
+  "reasoning":        "Strong negative framing around pricing...",
+  "pii_masked":       false,
+  "masked_text":      "Ticket prices are getting ridiculous.",
+  "pii_entities":     [],
+  "processed_at":     "2025-05-22T10:00:00Z"
 }
 ```
-
-### `GET /evaluate/quick?n=20`
-Runs local RoBERTa evaluation on `n` messages from the dataset. No Groq calls — fast.
 
 ### `GET /health`
 Returns `{"status": "ok"}`.
 
 ---
 
-## Exposing publicly for demos
+## Deploying to Railway
 
-Download [cloudflared](https://github.com/cloudflare/cloudflared/releases/latest).
+1. Push this repo to GitHub
+2. Go to [railway.app](https://railway.app) → **New Project → Deploy from GitHub**
+3. Select the repo — Railway auto-detects the `Dockerfile`
+4. **Settings → Variables** → add `GROQ_API_KEY=gsk_...`
+5. Done — live URL provided automatically
 
-**Terminal 1:**
+---
+
+## Running locally with a public URL (Cloudflare Tunnel)
+
 ```bash
+# Terminal 1
 uv run uvicorn server:app --host 127.0.0.1 --port 8000
+
+# Terminal 2 — Windows
+./cloudflared.exe tunnel --url http://localhost:8000
 ```
 
-**Terminal 2:**
-```bash
-# Windows
-.\cloudflared.exe tunnel --url http://localhost:8000
-
-# Mac / Linux
-./cloudflared tunnel --url http://localhost:8000
-```
-
-You get a live `https://random-name.trycloudflare.com` URL instantly. No account needed.
+Gives a live `https://random-name.trycloudflare.com` URL. No account needed.
 
 ---
 
@@ -226,28 +253,11 @@ You get a live `https://random-name.trycloudflare.com` URL instantly. No account
 
 | Problem | Fix |
 |---------|-----|
-| `Key loaded status: False` | `.env` is missing or key is named wrong — must be exactly `GROQ_API_KEY` |
-| `401 Unauthorized` from Groq | API key is wrong or expired — generate a new one at console.groq.com |
-| `spacy model not found` | Run the two `spacy download` commands from Step 2 |
+| `Key loaded status: False` | `.env` missing or key name wrong — must be `GROQ_API_KEY` |
+| `401 Unauthorized` from Groq | Key expired — generate a new one at console.groq.com |
+| `spacy model not found` | Run the `spacy download` commands from Step 2 |
 | Port 8000 already in use | Add `--port 8001` to the uvicorn command |
-| `uv` not recognised | Restart terminal after installing, or re-run the install command |
-| `Sheet1 not found` / `Fan Messages not found` | Check your dataset file is in the project root and named exactly `fan_dataset_200_scored.xlsx` |
-| Server starts but returns 500 | Check terminal output — usually a missing `.env` or spaCy model |
-
----
-
-## Dataset
-
-`fan_dataset_200_scored.xlsx` — 200 labeled fan messages, English and German.
-
-| Column | Description |
-|--------|-------------|
-| `Raw Message (with PII)` | Original text with realistic PII |
-| `Masked A` | Pseudo-token masking (e.g. `USR_BF25`, `EML_2C17`) |
-| `Masked B` | Fake persona masking (e.g. `Riley Shaw`) |
-| `Topic` | Ground truth topic labels |
-| `Sentiment` | Ground truth: Positive / Neutral / Negative |
-| `sentiment_score` | Numeric 0–1 score from RoBERTa (0 = positive, 1 = negative) |
+| `uv` not recognised | Restart terminal after installing |
 
 ---
 
