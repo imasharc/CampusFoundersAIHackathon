@@ -32,7 +32,7 @@ pipeline('text-classification', model='cardiffnlp/twitter-xlm-roberta-base-senti
 print('RoBERTa weights cached.')"
 
 # Copy application files
-COPY pipeline.py server.py index.html evaluate.py score_dataset.py ./
+COPY pipeline.py server.py index.html ./
 
 # HF Spaces requires port 7860
 EXPOSE 7860
