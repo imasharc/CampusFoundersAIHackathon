@@ -32,11 +32,9 @@ pipeline('text-classification', model='cardiffnlp/twitter-xlm-roberta-base-senti
 print('RoBERTa weights cached.')"
 
 # Copy application files
-COPY pipeline.py server.py index.html ./
+cp pipeline.py server.py index.html Dockerfile README.md hf-space/
 
 # HF Spaces requires port 7860
 EXPOSE 7860
 
 CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "7860"]
-
-# cache bust
