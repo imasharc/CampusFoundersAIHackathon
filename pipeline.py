@@ -1,51 +1,63 @@
 # pipeline.py
-import os, json, datetime
+import os, json, datetime, sys
 import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# ── load once at startup, not per request ─────────────────────────────────────
-from transformers import pipeline as hf_pipeline
-from presidio_analyzer import AnalyzerEngine
-from presidio_analyzer.nlp_engine import NlpEngineProvider
-from presidio_anonymizer import AnonymizerEngine
+try:
+    from transformers import pipeline as hf_pipeline
+    from presidio_analyzer import AnalyzerEngine, PatternRecognizer, Pattern as PPattern
+    from presidio_analyzer.nlp_engine import NlpEngineProvider
+    from presidio_anonymizer import AnonymizerEngine
+except Exception as e:
+    print(f"❌ IMPORT ERROR: {e}", flush=True)
+    sys.exit(1)
 
-print("Loading RoBERTa...")
-_sentiment = hf_pipeline(
-    "text-classification",
-    model="cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual",
-    top_k=None, truncation=True, max_length=512,
-)
+print("Loading RoBERTa...", flush=True)
+try:
+    _sentiment = hf_pipeline(
+        "text-classification",
+        model="cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual",
+        top_k=None, truncation=True, max_length=512,
+    )
+except Exception as e:
+    print(f"❌ ROBERTA LOAD ERROR: {e}", flush=True)
+    sys.exit(1)
 
-print("Loading Presidio (EN + DE)...")
-_provider = NlpEngineProvider(nlp_configuration={
-    "nlp_engine_name": "spacy",
-    "models": [
-        {"lang_code": "en", "model_name": "en_core_web_lg"},
-        {"lang_code": "de", "model_name": "de_core_news_lg"},
-    ],
-})
-_analyzer   = AnalyzerEngine(nlp_engine=_provider.create_engine())
-_anonymizer = AnonymizerEngine()
+print("Loading Presidio (EN + DE)...", flush=True)
+try:
+    _provider = NlpEngineProvider(nlp_configuration={
+        "nlp_engine_name": "spacy",
+        "models": [
+            {"lang_code": "en", "model_name": "en_core_web_lg"},
+            {"lang_code": "de", "model_name": "de_core_news_lg"},
+        ],
+    })
+    _analyzer   = AnalyzerEngine(nlp_engine=_provider.create_engine())
+    _anonymizer = AnonymizerEngine()
+except Exception as e:
+    print(f"❌ PRESIDIO LOAD ERROR: {e}", flush=True)
+    sys.exit(1)
 
-# ── Custom IBAN recognizer (not built-in to Presidio) ─────────────────────────
-from presidio_analyzer import PatternRecognizer, Pattern as PPattern
+print("Registering IBAN recognizer...", flush=True)
+try:
+    _iban_pattern = PPattern(
+        name="iban",
+        regex=r'\b[A-Z]{2}[0-9]{2}(?:[ ]?[A-Z0-9]{4}){3,7}(?:[ ]?[A-Z0-9]{1,4})?\b',
+        score=0.85,
+    )
+    for _lang in ("en", "de"):
+        _analyzer.registry.add_recognizer(PatternRecognizer(
+            supported_entity="IBAN_CODE",
+            patterns=[_iban_pattern],
+            supported_language=_lang,
+        ))
+except Exception as e:
+    print(f"❌ IBAN RECOGNIZER ERROR: {e}", flush=True)
+    sys.exit(1)
 
-_iban_pattern = PPattern(
-    name="iban",
-    # Matches IBANs with or without spaces, e.g. DE94 2342 5254 5253 00 or GB29NWBK60161331926819
-    regex=r'\b[A-Z]{2}[0-9]{2}(?:[ ]?[A-Z0-9]{4}){3,7}(?:[ ]?[A-Z0-9]{1,4})?\b',
-    score=0.85,
-)
-for _lang in ("en", "de"):
-    _analyzer.registry.add_recognizer(PatternRecognizer(
-        supported_entity="IBAN_CODE",
-        patterns=[_iban_pattern],
-        supported_language=_lang,
-    ))
-
-print("All models ready.")
+print("All models ready.", flush=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 
